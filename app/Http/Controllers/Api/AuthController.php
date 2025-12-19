@@ -11,6 +11,31 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
+    /**
+     * @OA\Post(
+     *      path="/api/register",
+     *      operationId="register",
+     *      tags={"Auth"},
+     *      summary="Register new user",
+     *      description="Register a new user account",
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={"name","email","password"},
+     *              @OA\Property(property="name", type="string"),
+     *              @OA\Property(property="email", type="string", format="email"),
+     *              @OA\Property(property="password", type="string")
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response=201,
+     *          description="User registered",
+     *          @OA\JsonContent(
+     *              @OA\Property(property="access_token", type="string")
+     *          )
+     *      )
+     * )
+     */
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -39,6 +64,32 @@ class AuthController extends Controller
         ], 201);
     }
 
+    /**
+     * @OA\Post(
+     *      path="/api/login",
+     *      operationId="login",
+     *      tags={"Auth"},
+     *      summary="User Login",
+     *      description="Login with email and password",
+     *      @OA\RequestBody(
+     *          required=true,
+     *          @OA\JsonContent(
+     *              required={"email","password"},
+     *              @OA\Property(property="email", type="string", format="email"),
+     *              @OA\Property(property="password", type="string", format="password")
+     *          )
+     *      ),
+     *      @OA\Response(
+     *          response=200,
+     *          description="Successful operation",
+     *          @OA\JsonContent(
+     *              @OA\Property(property="access_token", type="string"),
+     *              @OA\Property(property="token_type", type="string")
+     *          )
+     *      ),
+     *      @OA\Response(response=401, description="Unauthorized")
+     * )
+     */
     public function login(Request $request)
     {
         if (!Auth::attempt($request->only('email', 'password'))) {
@@ -58,12 +109,52 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * @OA\Post(
+     *      path="/api/logout",
+     *      operationId="logout",
+     *      tags={"Auth"},
+     *      summary="Logout",
+     *      security={{"bearerAuth":{}}},
+     *      @OA\Response(
+     *          response=200,
+     *          description="Logged out"
+     *      )
+     * )
+     */
     public function logout(Request $request)
     {
+        // Revoke the token that was used to authenticate the current request...
         $request->user()->currentAccessToken()->delete();
 
         return response()->json([
             'message' => 'Logged out successfully'
+        ]);
+    }
+
+    public function logoutAll(Request $request) 
+    {
+         // Revoke all tokens for the user...
+         $request->user()->tokens()->delete();
+         
+         return response()->json([
+            'message' => 'Logged out from all devices successfully'
+         ]);
+    }
+
+    public function refreshToken(Request $request) 
+    {
+        $user = $request->user();
+        // Delete current token
+        $request->user()->currentAccessToken()->delete();
+        
+        // Create new token
+        $token = $user->createToken('auth_token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Token refreshed',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
         ]);
     }
 }

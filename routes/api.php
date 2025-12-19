@@ -21,11 +21,13 @@ Route::post('/login', [AuthController::class, 'login']);
 // Protected Routes
 Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/logout-all', [AuthController::class, 'logoutAll']);
     Route::get('/user', function (Request $request) {
         return $request->user();
     });
     
     // Products
+    Route::get('/products/search', [ProductController::class, 'search']); // Specific route first
     Route::get('/products', [ProductController::class, 'index']);
     Route::get('/products/{id}', [ProductController::class, 'show']);
     Route::post('/products', [ProductController::class, 'store']);
@@ -37,4 +39,13 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
 
     // Order
     Route::post('/orders', [OrderController::class, 'placeOrder']);
+    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancel']);
+
+    // Refresh Token
+    Route::post('/refresh-token', [AuthController::class, 'refreshToken']);
+
+    // Admin Routes
+    Route::middleware(['auth:sanctum', 'is_admin'])->group(function () {
+        Route::post('/admin/orders/{id}/refund', [OrderController::class, 'refund']);
+    });
 });
